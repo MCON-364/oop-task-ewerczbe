@@ -5,23 +5,24 @@ public final class AddTaskCommand implements Command {
     private final Task task;
 
     public AddTaskCommand(TaskRegistry registry, Task task) {
-        if (task == null) {
-            throw new IllegalArgumentException("Task cannot be null");
+        if (task == null || task.name().isEmpty()) {
+            throw new IllegalArgumentException("Task or task name cannot be null or empty");
         }
+
+        // Ensure the priority is not null at the time of command creation
+        if (task.priority() == null) {
+            throw new InvalidTaskPriorityException("Priority cannot be null for task: " + task.name());
+        }
+
         this.registry = registry;
         this.task = task;
     }
 
     @Override
     public void execute() {
-        // Check if a task with the same name already exists
-        registry.get(task.getName())
-                .ifPresent(existing -> {
-                    // Throw TaskAlreadyExistsException if task exists
-                    throw new TaskAlreadyExistsException("Task '" + task.getName() + "' already exists.");
-                });
-
-        // Add the new task to the registry
+        registry.get(task.name()).ifPresent(existing -> {
+            throw new TaskAlreadyExistsException("Task '" + task.name() + "' already exists.");
+        });
         registry.add(task);
     }
 }

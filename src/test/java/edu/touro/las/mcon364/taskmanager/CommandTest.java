@@ -4,6 +4,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
 
+import java.util.List;
+import java.util.Map;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class CommandTest {
@@ -114,5 +117,47 @@ class CommandTest {
 
         assertEquals(Priority.HIGH, registry.get("Urgent").orElseThrow().getPriority(),
                 "Should allow increasing priority");
+    }
+    @Test
+    @DisplayName("ChangeTaskPriorityCommand should change the task priority")
+    void testChangeTaskPriorityCommand() {
+        Task task = new Task("Task to Change", Priority.LOW);
+        registry.add(task);
+
+        Command command = new ChangeTaskPriorityCommand(registry, "Task to Change", Priority.HIGH);
+        command.execute();
+
+        Task updatedTask = registry.get("Task to Change").orElseThrow();
+        assertEquals(Priority.HIGH, updatedTask.getPriority(), "Priority should be updated to HIGH");
+    }
+    @Test
+    @DisplayName("AddTaskCommand should throw InvalidTaskPriorityException for null priority")
+    void testAddTaskCommandInvalidPriority() {
+        // Expect InvalidTaskPriorityException to be thrown during Task creation (not AddTaskCommand)
+        InvalidTaskPriorityException exception = assertThrows(InvalidTaskPriorityException.class, () -> {
+            Task task = new Task("Invalid Task", null);  // Task with null priority
+            new AddTaskCommand(registry, task);  // Even though command creation comes after, the exception happens earlier
+        });
+
+        // Assert the exception message
+        assertEquals("Priority cannot be null for task: Invalid Task", exception.getMessage());
+    }
+    @Test
+    @DisplayName("getTasksByPriority should group tasks by their priority")
+    void testGetTasksByPriority() {
+        Task task1 = new Task("Task 1", Priority.LOW);
+        Task task2 = new Task("Task 2", Priority.HIGH);
+        Task task3 = new Task("Task 3", Priority.LOW);
+
+        registry.add(task1);
+        registry.add(task2);
+        registry.add(task3);
+
+        Map<Priority, List<Task>> groupedTasks = registry.getTasksByPriority();
+
+        assertTrue(groupedTasks.containsKey(Priority.LOW));
+        assertTrue(groupedTasks.containsKey(Priority.HIGH));
+        assertEquals(2, groupedTasks.get(Priority.LOW).size(), "There should be 2 tasks with LOW priority");
+        assertEquals(1, groupedTasks.get(Priority.HIGH).size(), "There should be 1 task with HIGH priority");
     }
 }
