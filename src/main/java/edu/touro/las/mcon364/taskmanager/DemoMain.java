@@ -1,5 +1,7 @@
 package edu.touro.las.mcon364.taskmanager;
 
+import java.util.Optional;
+
 public class DemoMain {
     private final TaskRegistry registry;
     private final TaskManager manager;
@@ -40,9 +42,9 @@ public class DemoMain {
 
     private void demonstrateRetrievingTask() {
         System.out.println("\n2. Retrieving a specific task...");
-        Task retrieved = registry.get("Fix critical bug");
-        if (retrieved != null) {
-            System.out.println("   Found: " + retrieved.getName() + " (Priority: " + retrieved.getPriority() + ")");
+        Optional<Task> retrieved = registry.get("Fix critical bug");
+        if (retrieved.isPresent()) {
+            System.out.println("   Found: " + retrieved.get().name() + " (Priority: " + retrieved.get().getPriority() + ")");
         } else {
             System.out.println("   Task not found");
         }
@@ -57,7 +59,11 @@ public class DemoMain {
 
     private void demonstrateUpdatingNonExistentTask() {
         System.out.println("\n4. Attempting to update non-existent task...");
-        manager.run(new UpdateTaskCommand(registry, "Non-existent task", Priority.HIGH));
+        try {
+            manager.run(new UpdateTaskCommand(registry, "Non-existent task", Priority.HIGH));
+        } catch (TaskNotFoundException e) {
+            System.err.println("   Error: " + e.getMessage());  // Handle the exception gracefully
+        }
         System.out.println("   ^ This should throw a custom exception, not just print a warning!");
     }
 
@@ -70,8 +76,8 @@ public class DemoMain {
 
     private void demonstrateNullReturn() {
         System.out.println("\n6. Attempting to retrieve non-existent task...");
-        Task missing = registry.get("Non-existent task");
-        if (missing == null) {
+        Optional<Task> missing = registry.get("Non-existent task");
+        if (missing.isEmpty()) {
             System.out.println("   Returned null - this should be refactored to use Optional!");
         }
     }
@@ -90,7 +96,7 @@ public class DemoMain {
     private void displayAllTasks() {
         System.out.println("\n   Current tasks in registry:");
         registry.getAll().forEach((name, task) ->
-            System.out.println("     - " + name + " (Priority: " + task.getPriority() + ")")
+                System.out.println("     - " + name + " (Priority: " + task.getPriority() + ")")
         );
     }
 }
