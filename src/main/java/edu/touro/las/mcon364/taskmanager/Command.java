@@ -1,3 +1,6 @@
 package edu.touro.las.mcon364.taskmanager;
 
-public interface Command { void execute(); }
+public sealed interface Command
+        permits UpdateTaskCommand, AddTaskCommand, RemoveTaskCommand {
+    void execute();
+}

@@ -1,28 +1,36 @@
 package edu.touro.las.mcon364.taskmanager;
 
-public class UpdateTaskCommand implements Command {
+import java.util.Optional;
+
+public final class UpdateTaskCommand implements Command {
     private final TaskRegistry registry;
     private final String taskName;
     private final Priority newPriority;
 
     public UpdateTaskCommand(TaskRegistry registry, String taskName, Priority newPriority) {
+        if (taskName == null || taskName.isEmpty()) {
+            throw new IllegalArgumentException("Task name must not be null or empty");
+        }
+        if (newPriority == null) {
+            throw new IllegalArgumentException("Priority cannot be null");
+        }
         this.registry = registry;
         this.taskName = taskName;
         this.newPriority = newPriority;
     }
 
+    @Override
     public void execute() {
-        // NOTE: This demonstrates old-style null checking
-        // Students should refactor to use Optional and custom exceptions
-        Task existing = registry.get(taskName);
-        if (existing == null) {
-            // Currently just silently fails - should throw a custom exception!
-            System.err.println("Warning: Task '" + taskName + "' not found. Update ignored.");
-            return;
+        // Try to retrieve the task, no exception thrown
+        Optional<Task> existing = registry.get(taskName);
+
+        if (existing.isEmpty()) {
+            // Gracefully handle if the task doesn't exist
+            throw new TaskNotFoundException("Task '" + taskName + "' not found.");
         }
 
-        // Create a new task with updated priority (tasks are immutable)
-        Task updated = new Task(existing.getName(), newPriority);
-        registry.add(updated);  // This replaces the old task
+        // Proceed with update if task exists
+        Task updated = new Task(existing.get().getName(), newPriority);  // Create a new task with the updated priority
+        registry.add(updated);  // Replace the existing task with the updated one
     }
 }

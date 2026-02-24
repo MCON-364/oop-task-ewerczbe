@@ -6,10 +6,6 @@ import org.junit.jupiter.api.DisplayName;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * Unit tests for Command implementations.
- * After sealing the Command interface and refactoring, these tests should still pass.
- */
 class CommandTest {
     private TaskRegistry registry;
 
@@ -26,21 +22,23 @@ class CommandTest {
 
         command.execute();
 
-        assertNotNull(registry.get("New task"), "Task should be in registry after AddTaskCommand");
-        assertEquals(task, registry.get("New task"), "Added task should match");
+        assertNotNull(registry.get("New task").orElse(null), "Task should be in registry after AddTaskCommand");
+        assertEquals(task, registry.get("New task").orElse(null), "Added task should match");
     }
 
+
     @Test
-    @DisplayName("AddTaskCommand should replace existing task with same name")
-    void testAddTaskCommandReplacement() {
-        Task originalTask = new Task("Task", Priority.LOW);
-        Task replacementTask = new Task("Task", Priority.HIGH);
+    @DisplayName("AddTaskCommand should throw TaskAlreadyExistsException when task with same name exists")
+    void testAddTaskCommandTaskAlreadyExists() {
+        Task task = new Task("Existing task", Priority.MEDIUM);
+        new AddTaskCommand(registry, task).execute();
 
-        new AddTaskCommand(registry, originalTask).execute();
-        new AddTaskCommand(registry, replacementTask).execute();
+        Task duplicateTask = new Task("Existing task", Priority.HIGH);
+        Command addCommand = new AddTaskCommand(registry, duplicateTask);
 
-        assertEquals(Priority.HIGH, registry.get("Task").getPriority(),
-                "Replacement task should have new priority");
+        // Expect TaskAlreadyExistsException to be thrown when trying to add a duplicate task
+        assertThrows(TaskAlreadyExistsException.class, addCommand::execute,
+                "Adding a task with the same name should throw TaskAlreadyExistsException");
     }
 
     @Test
@@ -51,16 +49,16 @@ class CommandTest {
         Command command = new RemoveTaskCommand(registry, "To be removed");
         command.execute();
 
-        assertNull(registry.get("To be removed"), "Task should be removed from registry");
+        assertNull(registry.get("To be removed").orElse(null), "Task should be removed from registry");
     }
 
     @Test
-    @DisplayName("RemoveTaskCommand on non-existent task should not throw")
+    @DisplayName("RemoveTaskCommand on non-existent task should throw TaskNotFoundException")
     void testRemoveTaskCommandNonExistent() {
         Command command = new RemoveTaskCommand(registry, "Non-existent");
 
-        assertDoesNotThrow(command::execute,
-                "Removing non-existent task should not throw exception");
+        assertThrows(TaskNotFoundException.class, command::execute,
+                "Removing non-existent task should throw TaskNotFoundException");
     }
 
     @Test
@@ -71,8 +69,7 @@ class CommandTest {
         Command command = new UpdateTaskCommand(registry, "Update me", Priority.HIGH);
         command.execute();
 
-        Task updated = registry.get("Update me");
-        assertNotNull(updated, "Task should still exist after update");
+        Task updated = registry.get("Update me").orElseThrow();
         assertEquals(Priority.HIGH, updated.getPriority(), "Priority should be updated to HIGH");
     }
 
@@ -84,22 +81,17 @@ class CommandTest {
         Command command = new UpdateTaskCommand(registry, "Important task", Priority.LOW);
         command.execute();
 
-        Task updated = registry.get("Important task");
-        assertEquals("Important task", updated.getName(), "Task name should be preserved");
+        Task updated = registry.get("Important task").orElseThrow();
+        assertEquals("Important task", updated.name(), "Task name should be preserved");
     }
 
     @Test
-    @DisplayName("UpdateTaskCommand on non-existent task should not throw (pre-refactor)")
+    @DisplayName("UpdateTaskCommand on non-existent task should throw TaskNotFoundException")
     void testUpdateTaskCommandNonExistent() {
         Command command = new UpdateTaskCommand(registry, "Non-existent", Priority.HIGH);
 
-        // Pre-refactor: this should not throw, just print a warning
-        assertDoesNotThrow(command::execute,
-                "Updating non-existent task should not throw (before custom exception refactoring)");
-
-        // Task should not be created
-        assertNull(registry.get("Non-existent"),
-                "Non-existent task should not be created by update");
+        assertThrows(TaskNotFoundException.class, command::execute,
+                "Updating non-existent task should throw TaskNotFoundException");
     }
 
     @Test
@@ -109,7 +101,7 @@ class CommandTest {
 
         new UpdateTaskCommand(registry, "Flexible", Priority.LOW).execute();
 
-        assertEquals(Priority.LOW, registry.get("Flexible").getPriority(),
+        assertEquals(Priority.LOW, registry.get("Flexible").orElseThrow().getPriority(),
                 "Should allow decreasing priority");
     }
 
@@ -120,8 +112,7 @@ class CommandTest {
 
         new UpdateTaskCommand(registry, "Urgent", Priority.HIGH).execute();
 
-        assertEquals(Priority.HIGH, registry.get("Urgent").getPriority(),
+        assertEquals(Priority.HIGH, registry.get("Urgent").orElseThrow().getPriority(),
                 "Should allow increasing priority");
     }
 }
-

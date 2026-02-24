@@ -2,9 +2,7 @@ package edu.touro.las.mcon364.taskmanager;
 
 import java.util.Objects;
 
-public class Task {
-    private final String name;
-    private final Priority priority;
+public record Task(String name, Priority priority) {
 
     public Task(String name, Priority priority) {
         this.name = name;
